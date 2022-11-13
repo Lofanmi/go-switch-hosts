@@ -1,0 +1,9 @@
+[global]
+hosts = [
+    "env-dev",
+    "env-pro",
+]
+
+[alias]
+"env-dev" = "开发环境"
+"env-pro" = "线上环境"

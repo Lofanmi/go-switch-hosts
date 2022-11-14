@@ -16,7 +16,8 @@ import (
 
 func NewApplication() (*Application, func(), error) {
 	configLoader := &store.ConfigLoader{}
-	hostsStore := store.NewHosts(configLoader)
+	parser := store.NewDefaultParser()
+	hostsStore := store.NewHostsStore(configLoader, parser)
 	pcapHandleManager, cleanup, err := pcap.NewHandleManager()
 	if err != nil {
 		return nil, nil, err

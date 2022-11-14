@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"math/rand"
 	"net"
 	"os/exec"
 	"strconv"
@@ -9,11 +10,10 @@ import (
 	"time"
 
 	"github.com/Lofanmi/go-switch-hosts/contracts"
-	"github.com/Lofanmi/go-switch-hosts/internal/gateway"
-	"github.com/Lofanmi/go-switch-hosts/internal/gotil"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	log "github.com/sirupsen/logrus"
 )
 
 type Network struct {
@@ -52,22 +52,6 @@ func (s *Network) InterfaceIP(iface *net.Interface, to4 bool) net.IP {
 		}
 	}
 	return nil
-}
-
-func (s *Network) Route(ip net.IP) (gatewayIP net.IP, iface *net.Interface, err error) {
-	cmd := exec.Command("route", "-n", "get", ip.String())
-	data, err := cmd.CombinedOutput()
-	if err != nil {
-		return
-	}
-	str := strings.TrimSpace(gotil.StringCut(string(data), "gateway: ", "\n", false))
-	if str == "" {
-		return gateway.Default()
-	}
-	gatewayIP = net.ParseIP(str)
-	ifaceName := strings.TrimSpace(gotil.StringCut(string(data), "interface: ", "\n", false))
-	iface = s.ifaceList.ByName(ifaceName)
-	return
 }
 
 func (s *Network) GatewayHardwareAddr(gateway net.IP, iface *net.Interface) (addr net.HardwareAddr, err error) {
@@ -161,5 +145,79 @@ func (s *Network) GetTCPConnectionList() (data contracts.TCPConnectionSlice, err
 }
 
 func (s *Network) KillTCPConnection(connection contracts.TCPConnection) (err error) {
-	return
+	readTimeout := time.Second
+	if err = s.killTCPConnection(connection.DstIP, connection.DstPort, readTimeout); err != nil {
+		return
+	}
+	return s.killTCPConnection(connection.SrcIP, connection.SrcPort, readTimeout)
+}
+
+func (s *Network) killTCPConnection(dstIP net.IP, dstPort uint16, readTimeout time.Duration) (err error) {
+	gw, iface, err := s.Route(dstIP)
+	if err != nil {
+		return
+	}
+	addr, err := s.GatewayHardwareAddr(gw, iface)
+	if err != nil {
+		return err
+	}
+	srcIP := s.InterfaceIP(iface, dstIP.To4() != nil)
+	version, ethernetType := uint8(4), layers.EthernetTypeIPv4
+	if dstIP.To4() == nil {
+		version, ethernetType = uint8(6), layers.EthernetTypeIPv6
+	}
+	limit := 1024
+	port := rand.Intn(65536-limit) + limit + 1
+	eth := layers.Ethernet{SrcMAC: iface.HardwareAddr, DstMAC: addr, EthernetType: ethernetType}
+	ip4 := layers.IPv4{SrcIP: srcIP, DstIP: dstIP, Version: version, TTL: 64, Protocol: layers.IPProtocolTCP}
+	tcp := layers.TCP{SrcPort: layers.TCPPort(port), DstPort: layers.TCPPort(dstPort), Seq: rand.Uint32(), SYN: true, Window: 65535}
+	if err = tcp.SetNetworkLayerForChecksum(&ip4); err != nil {
+		return
+	}
+	buf := gopacket.NewSerializeBuffer()
+	options := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+	if err = gopacket.SerializeLayers(buf, options, &eth, &ip4, &tcp); err != nil {
+		return
+	}
+	var handle *pcap.Handle
+	if handle, err = s.handleManager.GetHandle(iface.Name); err != nil {
+		return
+	}
+	start, ack, window := time.Now(), uint32(0), uint16(0)
+	for {
+		if time.Since(start) > readTimeout {
+			err = errors.New("timeout getting ARP reply")
+			return
+		}
+		if err = gopacket.SerializeLayers(buf, options, &eth, &ip4, &tcp); err != nil {
+			return
+		}
+		if err = handle.WritePacketData(buf.Bytes()); err != nil {
+			return
+		}
+		var data []byte
+		if data, _, err = handle.ReadPacketData(); err != nil {
+			if err != pcap.NextErrorTimeoutExpired {
+				log.Println(err)
+			}
+			continue
+		}
+		packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
+		if packet.NetworkLayer() == nil || packet.TransportLayer() == nil || packet.TransportLayer().LayerType() != layers.LayerTypeTCP {
+			continue
+		}
+		receiveTCP4 := packet.TransportLayer().(*layers.TCP)
+		ack = receiveTCP4.Ack
+		window = receiveTCP4.Window
+		break
+	}
+	tcp = layers.TCP{SrcPort: layers.TCPPort(port), DstPort: layers.TCPPort(dstPort), Seq: ack, RST: true, SYN: true, Window: window}
+	if err = tcp.SetNetworkLayerForChecksum(&ip4); err != nil {
+		return
+	}
+	buf = gopacket.NewSerializeBuffer()
+	if err = gopacket.SerializeLayers(buf, options, &eth, &ip4, &tcp); err != nil {
+		return
+	}
+	return handle.WritePacketData(buf.Bytes())
 }

@@ -1,7 +1,17 @@
 package gotil
 
 import (
+	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	EnvGoSwitchHostsLogLevel   = "GO_SWITCH_HOSTS_LOG_LEVEL"
+	EnvGoSwitchHostsConfigPath = "GO_SWITCH_HOSTS_CONFIG_PATH"
+	EnvGoSwitchHostsConfigName = "GO_SWITCH_HOSTS_CONFIG_NAME"
+	EnvGoSwitchHostsConfigType = "GO_SWITCH_HOSTS_CONFIG_TYPE"
 )
 
 func StringCut(s, begin, end string, withBegin bool) string {
@@ -22,11 +32,14 @@ func StringCut(s, begin, end string, withBegin bool) string {
 	}
 }
 
-func InArray[T comparable](e T, items []T) bool {
-	for _, item := range items {
-		if e == item {
-			return true
-		}
+func IsDevelopment() bool {
+	return log.GetLevel() == log.DebugLevel
+}
+
+func Env(key, defaultValue string) (value string) {
+	if value = os.Getenv(key); value == "" {
+		value = defaultValue
 	}
-	return false
+	log.WithField("key", key).WithField("value", value).Debug("读取环境变量")
+	return value
 }

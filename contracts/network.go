@@ -54,5 +54,5 @@ type Network interface {
 	Route(ip net.IP) (gatewayIP net.IP, iface *net.Interface, err error)
 	GatewayHardwareAddr(gateway net.IP, iface *net.Interface) (addr net.HardwareAddr, err error)
 	GetTCPConnectionList() (data TCPConnectionSlice, err error)
-	KillTCPConnection(connection TCPConnection) (err error)
+	KillTCPConnection(connection *TCPConnection) (err error)
 }

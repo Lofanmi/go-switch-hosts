@@ -2,6 +2,7 @@ package gotil
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -12,6 +13,9 @@ const (
 	EnvGoSwitchHostsConfigPath = "GO_SWITCH_HOSTS_CONFIG_PATH"
 	EnvGoSwitchHostsConfigName = "GO_SWITCH_HOSTS_CONFIG_NAME"
 	EnvGoSwitchHostsConfigType = "GO_SWITCH_HOSTS_CONFIG_TYPE"
+
+	DefaultConfigName = "hosts"
+	DefaultConfigType = "toml"
 )
 
 func StringCut(s, begin, end string, withBegin bool) string {
@@ -42,4 +46,13 @@ func Env(key, defaultValue string) (value string) {
 	}
 	log.WithField("key", key).WithField("value", value).Debug("读取环境变量")
 	return value
+}
+
+func ParsePath(path string) string {
+	if path == "$PWD" {
+		path, _ = os.Getwd()
+	} else if strings.Contains(path, "$HOME") {
+		path = filepath.Join(GetHomeDir(), path[5:])
+	}
+	return path
 }

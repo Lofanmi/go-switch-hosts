@@ -7,3 +7,7 @@ func GetHomeDir() string {
 	}
 	return home
 }
+
+func EtcHostsFilename() string {
+	return "C:\\windows\\system32\\drivers\\etc\\hosts"
+}

@@ -15,9 +15,8 @@ import (
 // Injectors from wire.go:
 
 func NewApplication() (*Application, func(), error) {
-	configLoader := &store.ConfigLoader{}
 	parser := store.NewDefaultParser()
-	hostsStore := store.NewHostsStore(configLoader, parser)
+	hostsConfigLoader := store.NewConfigLoader(parser)
 	pcapHandleManager, cleanup, err := pcap.NewHandleManager()
 	if err != nil {
 		return nil, nil, err
@@ -27,6 +26,7 @@ func NewApplication() (*Application, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
+	hostsStore := store.NewHostsStore(hostsConfigLoader, parser, contractsNetwork)
 	application := &Application{
 		HostsStore: hostsStore,
 		Network:    contractsNetwork,

@@ -17,5 +17,4 @@
 *.bak
 .idea/*
 .vscode/*
-hosts/*.hosts
 go-switch-hosts

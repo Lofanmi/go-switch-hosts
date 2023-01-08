@@ -2,9 +2,14 @@ package contracts
 
 import (
 	"io"
+
+	"github.com/fsnotify/fsnotify"
 )
 
-type EntryType int
+const (
+	ChangeTypeConfig ChangeType = iota
+	ChangeTypeHosts
+)
 
 const (
 	EntryTypeComment EntryType = iota
@@ -12,14 +17,47 @@ const (
 	EntryTypeIPHost
 )
 
-type Entry struct {
-	Type    EntryType `json:"type"`
-	Content string    `json:"content"`
-	IP      string    `json:"ip"`
-	Host    string    `json:"host"`
-}
+type (
+	EntryType int
 
-type EntrySlice []Entry
+	IP   = string
+	Host = string
+
+	ChangeType  = int
+	ChangeEvent struct {
+		Type  ChangeType
+		Event fsnotify.Event
+	}
+
+	Entry struct {
+		Type    EntryType `json:"type"`
+		Content string    `json:"content"`
+		IP      IP        `json:"ip"`
+		Host    Host      `json:"host"`
+	}
+
+	EntrySlice []Entry
+
+	Parser interface {
+		Parse(list *EntrySlice, content string)
+		Bind(list *EntrySlice, IP, host string)
+		Comment(list *EntrySlice, comment string)
+		EmptyLine(list *EntrySlice)
+	}
+
+	HostsStore interface {
+		Init()
+		List() EntrySlice
+		Save(list EntrySlice)
+		Write(buf io.Writer) (err error)
+	}
+
+	HostsConfigLoader interface {
+		Path() (path string)
+		Load(path string)
+		OnChange(func(event ChangeEvent))
+	}
+)
 
 func (s Entry) String() string {
 	switch s.Type {
@@ -31,24 +69,42 @@ func (s Entry) String() string {
 	return ""
 }
 
-type Parser interface {
-	Parse(content string)
-	Bind(IP, host string)
-	Comment(comment string)
-	EmptyLine()
-	List() (list EntrySlice)
+func (s EntrySlice) Map() (m map[Host]IP) {
+	if len(s) <= 0 {
+		return
+	}
+	m = map[Host]IP{}
+	for _, entry := range s {
+		if entry.Type != EntryTypeIPHost {
+			continue
+		}
+		// hosts 文件优先使用前面的定义，后面有相同主机名称但是 IP 不同也会被忽略。
+		if _, exist := m[entry.Host]; !exist {
+			m[entry.Host] = entry.IP
+		}
+	}
+	return
 }
 
-type HostsStore interface {
-	Init()
-	List() EntrySlice
-	Save(list EntrySlice)
-	Count() int
-	Flush()
-}
-
-type HostsConfigLoader interface {
-	Path() (path string)
-	Load(path string, parser Parser)
-	Print(hosts HostsStore, buf io.Writer) (err error)
+func (s EntrySlice) Diff(newer EntrySlice) (change bool, older *Set) {
+	m := s.Map()
+	if len(m) <= 0 && len(newer) > 0 {
+		change = true
+		return
+	}
+	older = NewSet()
+	for _, newEntry := range newer {
+		if oldIP, exist := m[newEntry.Host]; exist && oldIP != newEntry.IP {
+			change = true
+			older.Add(oldIP)
+		}
+	}
+	n := newer.Map()
+	for host, ip := range m {
+		if _, exist := n[host]; !exist {
+			change = true
+			older.Add(ip)
+		}
+	}
+	return
 }

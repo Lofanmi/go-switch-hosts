@@ -144,7 +144,7 @@ func (s *Network) GetTCPConnectionList() (data contracts.TCPConnectionSlice, err
 	return
 }
 
-func (s *Network) KillTCPConnection(connection contracts.TCPConnection) (err error) {
+func (s *Network) KillTCPConnection(connection *contracts.TCPConnection) (err error) {
 	readTimeout := time.Second
 	if err = s.killTCPConnection(connection.DstIP, connection.DstPort, readTimeout); err != nil {
 		return

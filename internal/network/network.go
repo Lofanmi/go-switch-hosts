@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"net"
 	"os/exec"
@@ -145,14 +146,20 @@ func (s *Network) GetTCPConnectionList() (data contracts.TCPConnectionSlice, err
 }
 
 func (s *Network) KillTCPConnection(connection *contracts.TCPConnection) (err error) {
-	readTimeout := time.Second
-	if err = s.killTCPConnection(connection.DstIP, connection.DstPort, readTimeout); err != nil {
-		return
+	readTimeout := time.Second * 5
+	log.Debugf("杀死连接 1 %s", connection)
+	if err = s.killTCPConnection(connection.DstIP, connection.DstPort, connection.SrcPort, readTimeout); err != nil {
+		log.Debugf(err.Error())
 	}
-	return s.killTCPConnection(connection.SrcIP, connection.SrcPort, readTimeout)
+	time.Sleep(time.Second)
+	log.Debugf("杀死连接 2 %s", connection)
+	if err = s.killTCPConnection(connection.DstIP, connection.DstPort, connection.SrcPort, readTimeout); err != nil {
+		log.Debugf(err.Error())
+	}
+	return
 }
 
-func (s *Network) killTCPConnection(dstIP net.IP, dstPort uint16, readTimeout time.Duration) (err error) {
+func (s *Network) killTCPConnection(dstIP net.IP, dstPort, srcPort uint16, readTimeout time.Duration) (err error) {
 	gw, iface, err := s.Route(dstIP)
 	if err != nil {
 		return
@@ -166,40 +173,49 @@ func (s *Network) killTCPConnection(dstIP net.IP, dstPort uint16, readTimeout ti
 	if dstIP.To4() == nil {
 		version, ethernetType = uint8(6), layers.EthernetTypeIPv6
 	}
-	limit := 1024
-	port := rand.Intn(65536-limit) + limit + 1
+	random := rand.Uint32()
 	eth := layers.Ethernet{SrcMAC: iface.HardwareAddr, DstMAC: addr, EthernetType: ethernetType}
-	ip4 := layers.IPv4{SrcIP: srcIP, DstIP: dstIP, Version: version, TTL: 64, Protocol: layers.IPProtocolTCP}
-	tcp := layers.TCP{SrcPort: layers.TCPPort(port), DstPort: layers.TCPPort(dstPort), Seq: rand.Uint32(), SYN: true, Window: 65535}
-	if err = tcp.SetNetworkLayerForChecksum(&ip4); err != nil {
+	var ip gopacket.SerializableLayer
+	ip = &layers.IPv4{SrcIP: srcIP, DstIP: dstIP, Version: version, TTL: 64, Protocol: layers.IPProtocolTCP}
+	if ethernetType == layers.EthernetTypeIPv6 {
+		ip = &layers.IPv6{SrcIP: srcIP, DstIP: dstIP, Version: version} // IPv6 尚未测试
+	}
+	tcp := layers.TCP{SrcPort: layers.TCPPort(srcPort), DstPort: layers.TCPPort(dstPort), Seq: random, SYN: true, Window: 65535}
+	if err = tcp.SetNetworkLayerForChecksum(ip.(gopacket.NetworkLayer)); err != nil {
 		return
 	}
 	buf := gopacket.NewSerializeBuffer()
 	options := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
-	if err = gopacket.SerializeLayers(buf, options, &eth, &ip4, &tcp); err != nil {
+	if err = gopacket.SerializeLayers(buf, options, &eth, ip, &tcp); err != nil {
 		return
 	}
 	var handle *pcap.Handle
 	if handle, err = s.handleManager.GetHandle(iface.Name); err != nil {
 		return
 	}
-	start, ack, window := time.Now(), uint32(0), uint16(0)
+	start, seq, ack, window := time.Now(), uint32(0), uint32(0), uint16(0)
 	for {
 		if time.Since(start) > readTimeout {
-			err = errors.New("timeout getting ARP reply")
+			err = fmt.Errorf("读取远端 [%s:%d] 超时，等待时间大于 [%s]", dstIP.String(), dstPort, readTimeout)
 			return
 		}
-		if err = gopacket.SerializeLayers(buf, options, &eth, &ip4, &tcp); err != nil {
+		if err = gopacket.SerializeLayers(buf, options, &eth, ip, &tcp); err != nil {
 			return
 		}
+		log.Debugf("发送数据包 [SYN] %s", layersTCP2String(srcIP.String(), dstIP.String(), &tcp))
 		if err = handle.WritePacketData(buf.Bytes()); err != nil {
 			return
 		}
+		time.Sleep(time.Millisecond * 100)
+		_, _, _ = handle.ReadPacketData() // 忽略第一个包，测试发现是上面的发包。
+		// ignore, _, _ := handle.ReadPacketData() // 忽略第一个包，测试发现是上面的发包。
+		// ignorePacket := gopacket.NewPacket(ignore, layers.LayerTypeEthernet, gopacket.NoCopy)
+		// log.Println("------------------------------------------------------------------------------------------")
+		// log.Println(ignorePacket.String())
+		// log.Println("------------------------------------------------------------------------------------------")
 		var data []byte
-		if data, _, err = handle.ReadPacketData(); err != nil {
-			if err != pcap.NextErrorTimeoutExpired {
-				log.Println(err)
-			}
+		data, _, err = handle.ReadPacketData()
+		if err != nil && err != pcap.NextErrorTimeoutExpired || len(data) <= 0 {
 			continue
 		}
 		packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
@@ -208,16 +224,79 @@ func (s *Network) killTCPConnection(dstIP net.IP, dstPort uint16, readTimeout ti
 		}
 		receiveTCP4 := packet.TransportLayer().(*layers.TCP)
 		ack = receiveTCP4.Ack
-		window = receiveTCP4.Window
-		break
+		if ack != 0 && uint16(receiveTCP4.SrcPort) == dstPort && uint16(receiveTCP4.DstPort) == srcPort {
+			seq = receiveTCP4.Seq
+			window = receiveTCP4.Window
+			log.Debugf("收到对端回复 %s", layersTCP2String(dstIP.String(), srcIP.String(), receiveTCP4))
+			break
+		}
 	}
-	tcp = layers.TCP{SrcPort: layers.TCPPort(port), DstPort: layers.TCPPort(dstPort), Seq: ack, RST: true, SYN: true, Window: window}
-	if err = tcp.SetNetworkLayerForChecksum(&ip4); err != nil {
+	if ack == 0 {
+		err = fmt.Errorf("无法杀死连接 %s，拿不到 ack #_#", layersTCP2String(srcIP.String(), dstIP.String(), &tcp))
+		return
+	}
+
+	tcp = layers.TCP{SrcPort: layers.TCPPort(srcPort), DstPort: layers.TCPPort(dstPort), Seq: ack, Ack: seq + 1, RST: true, SYN: true, Window: window}
+	if err = tcp.SetNetworkLayerForChecksum(ip.(gopacket.NetworkLayer)); err != nil {
 		return
 	}
 	buf = gopacket.NewSerializeBuffer()
-	if err = gopacket.SerializeLayers(buf, options, &eth, &ip4, &tcp); err != nil {
+	if err = gopacket.SerializeLayers(buf, options, &eth, ip, &tcp); err != nil {
 		return
 	}
-	return handle.WritePacketData(buf.Bytes())
+	log.Debugf("发送数据包 [RST->remote] %s", layersTCP2String(srcIP.String(), dstIP.String(), &tcp))
+	if err = handle.WritePacketData(buf.Bytes()); err != nil {
+		return
+	}
+
+	srcIP, dstIP = dstIP, srcIP
+	srcPort, dstPort = dstPort, srcPort
+	tcp = layers.TCP{SrcPort: layers.TCPPort(srcPort), DstPort: layers.TCPPort(dstPort), Seq: seq, Ack: ack, RST: true, SYN: true, Window: window}
+	if err = tcp.SetNetworkLayerForChecksum(ip.(gopacket.NetworkLayer)); err != nil {
+		return
+	}
+	buf = gopacket.NewSerializeBuffer()
+	if err = gopacket.SerializeLayers(buf, options, &eth, ip, &tcp); err != nil {
+		return
+	}
+	log.Debugf("发送数据包 [RST->local]  %s", layersTCP2String(srcIP.String(), dstIP.String(), &tcp))
+	if err = handle.WritePacketData(buf.Bytes()); err != nil {
+		return
+	}
+
+	return
+}
+
+func layersTCP2String(srcIP, dstIP string, tcp *layers.TCP) string {
+	s := ""
+	if tcp.FIN {
+		s += "FIN|"
+	}
+	if tcp.SYN {
+		s += "SYN|"
+	}
+	if tcp.RST {
+		s += "RST|"
+	}
+	if tcp.PSH {
+		s += "PSH|"
+	}
+	if tcp.ACK {
+		s += "ACK|"
+	}
+	if tcp.URG {
+		s += "URG|"
+	}
+	if tcp.ECE {
+		s += "ECE|"
+	}
+	if tcp.CWR {
+		s += "CWR|"
+	}
+	if tcp.NS {
+		s += "NS|"
+	}
+	return fmt.Sprintf("|src=%s:%d|dst=%s:%d|seq=%d|ack=%d|window=%d|checksum=%d|%s",
+		srcIP, tcp.SrcPort, dstIP, tcp.DstPort, tcp.Seq, tcp.Ack, tcp.Window, tcp.Checksum, s,
+	)
 }

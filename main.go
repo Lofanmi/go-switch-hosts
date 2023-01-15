@@ -1,8 +1,8 @@
 package main
 
 func main() {
-	initLogger()
-	initConfig()
+	defer initLogger()()
+	defer initConfig()()
 
 	application, cleanup, err := NewApplication()
 	if err != nil {

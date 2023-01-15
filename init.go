@@ -10,12 +10,22 @@ import (
 
 const defaultLogLevel = "debug"
 
-func initLogger() {
+func initLogger() (fn func()) {
+	fn = func() {}
 	if level, err := log.ParseLevel(gotil.Env(gotil.EnvGoSwitchHostsLogLevel, defaultLogLevel)); err != nil {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		log.SetLevel(level)
 	}
+	if filename := gotil.Env(gotil.EnvGoSwitchHostsLogFilename, ""); filename != "" {
+		f, e := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
+		if e != nil {
+			panic(e)
+		}
+		fn = func() { _ = f.Close() }
+		log.SetOutput(f)
+	}
+	return
 }
 
 func backupEtcHosts(dir string) error {
@@ -33,7 +43,8 @@ func backupEtcHosts(dir string) error {
 	return err
 }
 
-func initConfig() {
+func initConfig() (fn func()) {
+	fn = func() {}
 	dir, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
@@ -86,4 +97,5 @@ hosts = [
 			panic(err)
 		}
 	}
+	return
 }

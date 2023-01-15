@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	EnvGoSwitchHostsLogLevel   = "GO_SWITCH_HOSTS_LOG_LEVEL"
-	EnvGoSwitchHostsConfigPath = "GO_SWITCH_HOSTS_CONFIG_PATH"
-	EnvGoSwitchHostsConfigName = "GO_SWITCH_HOSTS_CONFIG_NAME"
-	EnvGoSwitchHostsConfigType = "GO_SWITCH_HOSTS_CONFIG_TYPE"
+	EnvGoSwitchHostsLogLevel    = "GO_SWITCH_HOSTS_LOG_LEVEL"
+	EnvGoSwitchHostsLogFilename = "GO_SWITCH_HOSTS_LOG_FILENAME"
+	EnvGoSwitchHostsConfigPath  = "GO_SWITCH_HOSTS_CONFIG_PATH"
+	EnvGoSwitchHostsConfigName  = "GO_SWITCH_HOSTS_CONFIG_NAME"
+	EnvGoSwitchHostsConfigType  = "GO_SWITCH_HOSTS_CONFIG_TYPE"
 
 	DefaultConfigName = "hosts"
 	DefaultConfigType = "toml"

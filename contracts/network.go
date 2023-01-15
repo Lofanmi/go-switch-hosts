@@ -25,7 +25,7 @@ type TCPConnection struct {
 }
 
 func (s TCPConnection) String() string {
-	return fmt.Sprintf("%-15s:%d   --->   %-15s:%d", s.SrcIP, s.SrcPort, s.DstIP, s.DstPort)
+	return fmt.Sprintf("%s:%d<->%s:%d", s.SrcIP, s.SrcPort, s.DstIP, s.DstPort)
 }
 
 type TCPConnectionSlice []TCPConnection

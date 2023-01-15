@@ -17,4 +17,5 @@
 *.bak
 .idea/*
 .vscode/*
+*.log
 go-switch-hosts

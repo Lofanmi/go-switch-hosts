@@ -127,6 +127,7 @@ func (s *HostsStore) loadHosts() (list contracts.EntrySlice) {
 		log.WithField("filename", filename).Debugf("加载用户 hosts 文件")
 		data, e := os.ReadFile(filename)
 		if e != nil {
+			log.Fatalf(e.Error())
 			continue
 		}
 		s.parser.Comment(&list, "----------------------------------------------------------------------------")

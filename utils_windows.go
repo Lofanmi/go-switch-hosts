@@ -1,4 +1,15 @@
-package gotil
+//go:build windows
+
+package main
+
+import (
+	"os"
+	"path/filepath"
+)
+
+const (
+	LineEnding = "\r\n"
+)
 
 func GetHomeDir() string {
 	home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
@@ -9,5 +20,5 @@ func GetHomeDir() string {
 }
 
 func EtcHostsFilename() string {
-	return "C:\\windows\\system32\\drivers\\etc\\hosts"
+	return filepath.Join(os.Getenv("SYSTEMROOT"), "system32", "drivers", "etc", "hosts")
 }

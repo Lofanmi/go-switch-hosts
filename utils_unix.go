@@ -1,9 +1,13 @@
 //go:build !windows
 
-package gotil
+package main
 
 import (
 	"os"
+)
+
+const (
+	LineEnding = "\n"
 )
 
 func GetHomeDir() string {

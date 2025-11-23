@@ -18,4 +18,6 @@
 .idea/*
 .vscode/*
 *.log
-go-switch-hosts
+GoSwitchHosts-linux-amd64
+GoSwitchHosts-darwin-amd64
+GoSwitchHosts-windows-amd64.exe

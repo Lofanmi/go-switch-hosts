@@ -1,87 +1,116 @@
-# go-switch-hosts
+# GoSwitchHosts
 
-`go-switch-hosts` 是一个无 GUI 图形的、管理 hosts 文件的 Go 程序。
+一个基于 Go 语言开发的跨平台 hosts 文件管理工具，提供图形化界面来快速切换不同的 hosts 配置。这是一个轻量级、高性能的原生桌面应用，专为追求极致性能和简洁体验的用户设计。
 
-## 注意
+![GoSwitchHosts](GoSwitchHosts.ico)
 
-本程序还在持续开发中，请谨慎使用。操作之前建议先保存本地的 hosts 文件，再进行测试。
+## 🌟 项目初衷
 
-## 特性
+本项目可以简要替代 [oldj/SwitchHosts](https://github.com/oldj/SwitchHosts) 项目，解决原版本使用 Electron 框架导致的资源占用过高问题。
 
-- 原生二进制文件，极低的资源占用；
-- 原生跨平台：支持 macOS / Linux / Windows(待实现) 系统；
-- TOML 配置：您可以将配置文件放在 IDE / 代码编辑器中，变更后自动切换 hosts；
-- **自动关闭 TCP 连接：切换 hosts 后自动关闭残留的 TCP 连接，无需打开浏览器手工断开 socket 连接才生效！！！**
-    - 可以点开 GitHub 这个 Issue 看看 -> [oldj /
-      SwitchHosts #160](https://github.com/oldj/SwitchHosts/issues/160)
+但它并不是完全替代，它仅仅支持本地 hosts 的读取、新增和切换，并不会支持远程、文件夹、代理、备份等其它功能，也不会支持语法高亮。
 
-## 安装
+### 🚀 性能对比
 
-依赖 libpcap 和 Go 编译器，使用 Go 1.19 测试通过。请提前安装依赖。不要关闭 CGO 哈～
+| 项目 | 技术栈 | 占用空间     | 运行内存 | 启动速度 | UI 响应 | 劣势 |
+|------|--------|----------|---------|----------|---------|------|
+| **GoSwitchHosts** | Go + govcl (原生 UI) | **~7MB** | **~60MB** | 极快 | 原生流畅 | 功能精简，仅支持本地 hosts |
+| SwitchHosts (原版) | Electron + Web 技术 | ~265MB   | ~630MB | 较慢 | 有卡顿、粘腻感 | 资源占用高，体积大 |
 
-为解析连接的 IP 使用的网卡信息，需要以下命令：
+### ✨ 核心优势
 
-- netstat
-- route
-- ip
-- lsof
+- **🎯 轻量级**: 编译后的可执行文件不到 8MB，包含完整的 UI 运行时库
+- **⚡ 高性能**: 运行时内存占用仅约 60MB，相比 Electron 版本节省 90% 内存
+- **🖥️ 原生体验**: 基于 govcl 框架的原生桌面 UI，响应迅速，无卡顿粘腻感
+- **🚀 启动迅速**: 秒级启动，无需等待 Web 环境加载
+- **📦 自包含**: 内置 liblcl 运行时，无需额外依赖
+- **🔧 精简专注**: 专注于本地 hosts 管理，界面简洁，操作直观
 
-注：考虑过原生实现，但异常复杂。比如获取路由信息，Linux 和 macOS 完全不同，目前用本地命令处理。
+### ⚠️ 功能限制
+
+本项目采用精简设计理念，**并非**完全替代原版 SwitchHosts，目前**不支持**以下功能：
+
+- ❌ 远程 hosts 配置（URL 方式）
+- ❌ 多文件夹配置管理
+- ❌ 代理设置相关功能
+- ❌ hosts 语法高亮显示（govcl 的 TRichEdit 未完全支持 macOS 系统）
+- ❌ 历史备份
+
+如需上述高级功能，请继续使用原版 [SwitchHosts](https://github.com/oldj/SwitchHosts)。
+
+## 功能特性
+
+- 🖥️ 图形化界面：基于 govcl 框架的跨平台桌面应用
+- 🔄 快速切换：一键切换不同的 hosts 配置
+- 📝 配置管理：支持添加、编辑、删除 hosts 配置项
+- 🔍 系统集成：直接编辑系统 hosts 文件
+- 💾 配置持久化：配置存储在用户目录下，重启不丢失
+- 🎯 简洁高效：轻量级设计，运行快速稳定
+
+## 环境要求
+
+- **支持平台**: Windows、Linux、macOS
+- Go 1.25+
+- **编译依赖**:
+  - Windows: GCC (用于编译资源文件)
+  - Linux/macOS: GCC (可选，用于交叉编译)
+
+## 编译运行
+
+### 编译项目
 
 ```bash
-# 备份您的 hosts 文件
-cp /etc/hosts ~/hosts.backup
+# 编译当前平台版本（自动检测平台）
+make build
 
-# go-switch-hosts 也会帮您备份，初次使用时，会自动创建文件夹
-# ~/.go-switch-hosts
+# 编译特定平台版本
+make linux     # 编译 Linux AMD64 版本
+make darwin    # 编译 macOS AMD64 版本
+make windows   # 编译 Windows AMD64 版本（包含资源文件）
 
-# 允许其他程序变更 hosts 文件
-sudo chmod 755 /etc/hosts
+# 编译所有支持的平台
+make all
 
-# 安装并编译
-go install github.com/Lofanmi/go-switch-hosts@master
+# 清理编译产物
+make clean
 
-# 运行
-# 目前无任何 flag，实现依然有些粗糙，待开发
-go-switch-hosts
+# 仅编译 Windows 资源文件（如需要）
+make res
 ```
 
-## 关闭 TCP 连接原理
+### 环境变量
 
-核心：
+支持以下环境变量进行自定义配置：
 
-1. 取得合法的 SYN 序列号，充当中间人
-2. 向连接双方发送 RST 包
+- `GOSH_SWITCHHOSTSDIR`: 自定义配置文件目录（默认：`~/.SwitchHosts`）
+- `GOSH_HOSTSFILENAME`: 自定义 hosts 文件路径（默认：系统 hosts 文件路径）
 
-实现（假设需要关闭本地到远程的连接）：
+## 项目结构
 
-1. 获取连接四元组，随机 SEQ (作为本地)发送到远端
-2. 远端回复 Challenge ACK，告知预期接收的序列号 ACK
-3. 将 ACK 作为 SEQ 发送到远端，带上 RST 强行中断远程连接
-4. 由于 Challenge ACK 带有正确的 SEQ 和 ACK，将 SEQ+RST 发送给本地，强行中断本地连接
-5. 重复 1-4 步骤 1 次。因网络并发的存在，测试时可能 ACK 号对不上，抓包可复现(还是有别的原因？期待答案。)
+```
+go-switch-hosts/
+├── main.go              # 主程序入口
+├── form_main.go         # 主窗体界面实现
+├── config_manager.go    # 配置管理器
+├── utils.go            # 通用工具函数
+├── utils_windows.go    # Windows 平台相关函数
+├── utils_unix.go       # Unix 平台相关函数
+├── GoSwitchHosts.rc    # 资源文件
+├── Makefile           # 编译脚本
+└── go.mod             # Go 模块文件
+```
 
-关闭连接截图：
+## 技术栈
 
-![关闭 TCP 连接](img/killtcp.png)
+- **语言**: Go 1.25+
+- **GUI 框架**: [govcl](https://github.com/ying32/govcl) - Go 语言的 VCL 绑定
+- **构建工具**: Make + windres
 
-- 第一个蓝框：正常的 TCP 三次握手
-- 第二个篮框：上述 1-4 步骤
-- 第三个黄框：上述 1-4 步骤，有点谜～
+## 致谢
 
-目前关闭 TCP 连接的方式，按常理说不需要黄框的封包，待我有时间再研究研究哪里出了问题吧。我自己测试是可以正常关闭的了。
-
-## TODO-LIST
-
-- [x] 自动关闭失效连接
-- [x] 配置文件 toml 变更后自动刷新 hosts
-- [ ] hosts 文件变更后自动刷新 hosts
-- [ ] 寻求更优雅、更高效关闭 TCP 连接的实现
-- [ ] 移除命令依赖，原生 syscall 实现
-- [ ] IPv6 支持、验证
-- [ ] Linux 平台验证（已开发）
-- [ ] Windows 平台支持
+- 图标作者：https://www.iconfont.cn/collections/detail?cid=19977
+- 感谢 [govcl](https://github.com/ying32/govcl) 项目提供的优秀 GUI 框架
 
 ## 许可证
 
-go-switch-hosts 是一个免费开源软件，基于 Apache-2.0 协议发布。
+本项目采用 Apache-2.0 许可证，详见 [LICENSE](LICENSE) 文件。

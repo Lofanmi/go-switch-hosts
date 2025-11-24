@@ -8,6 +8,7 @@ import (
 
 	"github.com/ying32/govcl/vcl"
 	"github.com/ying32/govcl/vcl/types"
+	"github.com/ying32/govcl/vcl/types/colors"
 	"github.com/ying32/govcl/vcl/types/keys"
 )
 
@@ -50,32 +51,14 @@ func (f *TFormMain) initComponents() {
 	topPanel.SetHeight(42)
 	topPanel.SetAlign(types.AlTop)
 	topPanel.SetBevelOuter(types.BvNone)
-
-	f.ButtonSystemHosts = vcl.NewButton(topPanel)
-	f.ButtonSystemHosts.SetParent(topPanel)
-	f.ButtonSystemHosts.SetCaption("系统 Hosts")
-	f.ButtonSystemHosts.Font().SetColor(0x7A23D4)
-	f.ButtonSystemHosts.SetLeft(10)
-	f.ButtonSystemHosts.SetTop(6)
-	f.ButtonSystemHosts.SetWidth(80)
-	f.ButtonSystemHosts.SetHeight(28)
-	f.ButtonSystemHosts.SetOnClick(func(sender vcl.IObject) { f.onButtonSystemHostsClick() })
 	f.ButtonAddConfigEntry = vcl.NewButton(topPanel)
 	f.ButtonAddConfigEntry.SetParent(topPanel)
-	f.ButtonAddConfigEntry.SetCaption("新增")
-	f.ButtonAddConfigEntry.SetLeft(96)
+	f.ButtonAddConfigEntry.SetCaption("新增配置")
+	f.ButtonAddConfigEntry.SetLeft(10)
 	f.ButtonAddConfigEntry.SetTop(6)
 	f.ButtonAddConfigEntry.SetWidth(80)
 	f.ButtonAddConfigEntry.SetHeight(28)
 	f.ButtonAddConfigEntry.SetOnClick(func(sender vcl.IObject) { f.onButtonShowInfoClick() })
-	f.ButtonShowInfo = vcl.NewButton(topPanel)
-	f.ButtonShowInfo.SetParent(topPanel)
-	f.ButtonShowInfo.SetCaption("系统信息")
-	f.ButtonShowInfo.SetLeft(182)
-	f.ButtonShowInfo.SetTop(6)
-	f.ButtonShowInfo.SetWidth(80)
-	f.ButtonShowInfo.SetHeight(28)
-	f.ButtonShowInfo.SetOnClick(func(sender vcl.IObject) { f.onButtonShowInfoClick() })
 	f.ScrollBox = vcl.NewScrollBox(leftPanel)
 	f.ScrollBox.SetParent(leftPanel)
 	f.ScrollBox.SetAlign(types.AlClient)
@@ -88,6 +71,22 @@ func (f *TFormMain) initComponents() {
 	rightTopPanel.SetHeight(42)
 	rightTopPanel.SetAlign(types.AlTop)
 	rightTopPanel.SetBevelOuter(types.BvNone)
+	f.ButtonSystemHosts = vcl.NewButton(rightTopPanel)
+	f.ButtonSystemHosts.SetParent(rightTopPanel)
+	f.ButtonSystemHosts.SetCaption("系统 Hosts")
+	f.ButtonSystemHosts.SetLeft(0)
+	f.ButtonSystemHosts.SetTop(6)
+	f.ButtonSystemHosts.SetWidth(80)
+	f.ButtonSystemHosts.SetHeight(28)
+	f.ButtonSystemHosts.SetOnClick(func(sender vcl.IObject) { f.onButtonSystemHostsClick() })
+	f.ButtonShowInfo = vcl.NewButton(rightTopPanel)
+	f.ButtonShowInfo.SetParent(rightTopPanel)
+	f.ButtonShowInfo.SetCaption("查看信息")
+	f.ButtonShowInfo.SetLeft(96)
+	f.ButtonShowInfo.SetTop(6)
+	f.ButtonShowInfo.SetWidth(80)
+	f.ButtonShowInfo.SetHeight(28)
+	f.ButtonShowInfo.SetOnClick(func(sender vcl.IObject) { f.onButtonShowInfoClick() })
 	f.MemoHosts = vcl.NewMemo(rightPanel)
 	f.MemoHosts.SetParent(rightPanel)
 	f.MemoHosts.SetAlign(types.AlClient)
@@ -117,23 +116,28 @@ func (f *TFormMain) loadConfigToUI() {
 		checkBox.SetLeft(10)
 		checkBox.SetWidth(220)
 		checkBox.SetHeight(32)
-		checkBox.SetOnClick(func(sender vcl.IObject) {
-			f.onCheckBoxClick(checkBox, config.ID)
-		})
+		checkBox.SetOnClick(func(sender vcl.IObject) { f.onCheckBoxClick(checkBox, config.ID) })
 		f.checkBoxList = append(f.checkBoxList, checkBox)
-		// 添加编辑按钮
 		editLabel := vcl.NewLabel(f.ScrollBox)
 		editLabel.SetParent(f.ScrollBox)
 		editLabel.SetCaption("编辑")
 		editLabel.SetTop(checkBoxTop + int32(i*34))
-		editLabel.SetLeft(235)
+		editLabel.SetLeft(212)
 		editLabel.SetWidth(40)
 		editLabel.SetHeight(32)
 		editLabel.Font().SetColor(0xE16941)
 		editLabel.SetCursor(types.CrHandPoint)
-		editLabel.SetOnClick(func(sender vcl.IObject) {
-			f.onEditLabelClick(config)
-		})
+		editLabel.SetOnClick(func(sender vcl.IObject) { f.onEditLabelClick(config) })
+		deleteLabel := vcl.NewLabel(f.ScrollBox)
+		deleteLabel.SetParent(f.ScrollBox)
+		deleteLabel.SetCaption("删除")
+		deleteLabel.SetTop(checkBoxTop + int32(i*34))
+		deleteLabel.SetLeft(245)
+		deleteLabel.SetWidth(40)
+		deleteLabel.SetHeight(32)
+		deleteLabel.Font().SetColor(colors.ClRed)
+		deleteLabel.SetCursor(types.CrHandPoint)
+		deleteLabel.SetOnClick(func(sender vcl.IObject) { f.onDeleteLabelClick(config) })
 	}
 	f.onButtonSystemHostsClick()
 }
@@ -184,6 +188,18 @@ func (f *TFormMain) onEditLabelClick(config ConfigEntry) {
 	f.MemoHosts.SetReadOnly(false)
 	f.MemoHosts.SetText(content)
 	f.updateStatusBar(fmt.Sprintf("正在编辑: %s", config.Title))
+}
+
+func (f *TFormMain) onDeleteLabelClick(config ConfigEntry) {
+	// f.currentEditID = config.ID
+	// content, found := configManager.GetHostsByID(config.ID)
+	// if !found {
+	// 	vcl.ShowMessage(fmt.Sprintf("未找到配置项: %s", config.Title))
+	// 	return
+	// }
+	// f.MemoHosts.SetReadOnly(false)
+	// f.MemoHosts.SetText(content)
+	// f.updateStatusBar(fmt.Sprintf("正在编辑: %s", config.Title))
 }
 
 func (f *TFormMain) onMemoKeyDown(key *types.Char, shift types.TShiftState) {

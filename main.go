@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/ying32/govcl/vcl"
-	_ "github.com/ying32/liblclbinres"
 )
 
 var (

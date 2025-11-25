@@ -5,6 +5,8 @@ package main
 import (
 	"os"
 	"path/filepath"
+
+	_ "github.com/ying32/liblclbinres"
 )
 
 const (

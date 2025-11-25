@@ -1,3 +1,5 @@
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/ying32/govcl v2.2.3+incompatible h1:Iyfcl26yNE1USm+3uG+btQyhkoFIV18+VITrUdHu8Lw=
 github.com/ying32/govcl v2.2.3+incompatible/go.mod h1:yZVtbJ9Md1nAVxtHKIriKZn4K6TQYqI1en3sN/m9FJ8=
 github.com/ying32/liblclbinres v0.0.0-20220111074620-df670ba4baf4 h1:g6QaezInPib6PtPzh4w1qEzQPD4bT3zbX8dfBCSFqYM=

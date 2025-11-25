@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ying32/govcl/vcl"
 	"github.com/ying32/govcl/vcl/types"
 	"github.com/ying32/govcl/vcl/types/colors"
@@ -58,7 +59,7 @@ func (f *TFormMain) initComponents() {
 	f.ButtonAddConfigEntry.SetTop(6)
 	f.ButtonAddConfigEntry.SetWidth(80)
 	f.ButtonAddConfigEntry.SetHeight(28)
-	f.ButtonAddConfigEntry.SetOnClick(func(sender vcl.IObject) { f.onButtonShowInfoClick() })
+	f.ButtonAddConfigEntry.SetOnClick(func(sender vcl.IObject) { f.onButtonAddConfigClick() })
 	f.ScrollBox = vcl.NewScrollBox(leftPanel)
 	f.ScrollBox.SetParent(leftPanel)
 	f.ScrollBox.SetAlign(types.AlClient)
@@ -191,22 +192,56 @@ func (f *TFormMain) onEditLabelClick(config ConfigEntry) {
 }
 
 func (f *TFormMain) onDeleteLabelClick(config ConfigEntry) {
-	// f.currentEditID = config.ID
-	// content, found := configManager.GetHostsByID(config.ID)
-	// if !found {
-	// 	vcl.ShowMessage(fmt.Sprintf("未找到配置项: %s", config.Title))
-	// 	return
-	// }
-	// f.MemoHosts.SetReadOnly(false)
-	// f.MemoHosts.SetText(content)
-	// f.updateStatusBar(fmt.Sprintf("正在编辑: %s", config.Title))
+	if vcl.MessageDlg(fmt.Sprintf("确定要删除配置项 '%s' 吗？", config.Title), types.MtConfirmation, types.MbYes, types.MbNo) == types.MrYes {
+		if err := configManager.DeleteConfig(config.ID); err != nil {
+			vcl.ShowMessage(fmt.Sprintf("删除配置失败: %v", err))
+			return
+		}
+		if err := configManager.SaveToFile(systemHostsFilename); err != nil {
+			vcl.ShowMessage(fmt.Sprintf("保存hosts文件失败: %v", err))
+			return
+		}
+		// 如果正在编辑被删除的配置，清空编辑器
+		if f.currentEditID == config.ID {
+			f.currentEditID = ""
+			f.onButtonSystemHostsClick()
+		}
+		// 重新加载UI
+		f.refreshUI()
+		f.updateStatusBar(fmt.Sprintf("已删除配置: %s", config.Title))
+	}
+}
+
+func (f *TFormMain) onButtonAddConfigClick() {
+	title := vcl.InputBox("新增配置", "请输入配置名称:", "")
+	if title == "" {
+		return
+	}
+	// 创建新配置
+	newConfig := ConfigEntry{
+		ID:    uuid.New().String(),
+		Title: title,
+		On:    false,
+	}
+	// 保存新配置，内容为空
+	if err := configManager.AddConfig(newConfig, ""); err != nil {
+		vcl.ShowMessage(fmt.Sprintf("添加配置失败: %v", err))
+		return
+	}
+	if err := configManager.SaveToFile(systemHostsFilename); err != nil {
+		vcl.ShowMessage(fmt.Sprintf("保存hosts文件失败: %v", err))
+		return
+	}
+	// 重新加载UI
+	f.refreshUI()
+	f.updateStatusBar(fmt.Sprintf("已新增配置: %s", title))
 }
 
 func (f *TFormMain) onMemoKeyDown(key *types.Char, shift types.TShiftState) {
 	if f.currentEditID == "" {
 		return
 	}
-	if shift.In(types.SsCtrl) {
+	if shift.In(CommandKeyCode) {
 		hasSelection := f.MemoHosts.SelText() != ""
 		switch *key {
 		case keys.VkS:
@@ -287,6 +322,74 @@ func (f *TFormMain) cutCurrentLine() {
 func (f *TFormMain) pasteAtCurrentLine() {
 	f.saveCurrentContent()
 	f.updateStatusBar("已粘贴到当前行")
+}
+
+func (f *TFormMain) refreshUI() {
+	// 保存当前编辑状态
+	editingID := f.currentEditID
+	// 释放并重新创建ScrollBox
+	if f.ScrollBox != nil {
+		parent := f.ScrollBox.Parent()
+		if parent != nil {
+			f.ScrollBox.Free()
+			f.ScrollBox = vcl.NewScrollBox(parent)
+			f.ScrollBox.SetParent(parent)
+			f.ScrollBox.SetAlign(types.AlClient)
+		}
+	}
+	// 重新加载配置并完全重建UI
+	configs := configManager.GetConfig()
+	var checkBoxTop int32 = 10
+	f.checkBoxList = make([]*vcl.TCheckBox, 0, len(configs))
+	for i, config := range configs {
+		// 创建CheckBox
+		checkBox := vcl.NewCheckBox(f.ScrollBox)
+		checkBox.SetParent(f.ScrollBox)
+		checkBox.SetCaption(config.Title)
+		checkBox.SetChecked(config.On)
+		checkBox.SetTop(checkBoxTop + int32(i*34))
+		checkBox.SetLeft(10)
+		checkBox.SetWidth(220)
+		checkBox.SetHeight(32)
+		checkBox.SetOnClick(func(sender vcl.IObject) { f.onCheckBoxClick(checkBox, config.ID) })
+		f.checkBoxList = append(f.checkBoxList, checkBox)
+		// 创建编辑Label
+		editLabel := vcl.NewLabel(f.ScrollBox)
+		editLabel.SetParent(f.ScrollBox)
+		editLabel.SetCaption("编辑")
+		editLabel.SetTop(checkBoxTop + int32(i*34))
+		editLabel.SetLeft(212)
+		editLabel.SetWidth(40)
+		editLabel.SetHeight(32)
+		editLabel.Font().SetColor(0xE16941)
+		editLabel.SetCursor(types.CrHandPoint)
+		editLabel.SetOnClick(func(sender vcl.IObject) { f.onEditLabelClick(config) })
+		// 创建删除Label
+		deleteLabel := vcl.NewLabel(f.ScrollBox)
+		deleteLabel.SetParent(f.ScrollBox)
+		deleteLabel.SetCaption("删除")
+		deleteLabel.SetTop(checkBoxTop + int32(i*34))
+		deleteLabel.SetLeft(245)
+		deleteLabel.SetWidth(40)
+		deleteLabel.SetHeight(32)
+		deleteLabel.Font().SetColor(colors.ClRed)
+		deleteLabel.SetCursor(types.CrHandPoint)
+		deleteLabel.SetOnClick(func(sender vcl.IObject) { f.onDeleteLabelClick(config) })
+	}
+	// 如果之前正在编辑的配置被删除了，则显示系统hosts
+	if editingID != "" {
+		found := false
+		for _, config := range configs {
+			if config.ID == editingID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			f.currentEditID = ""
+			f.onButtonSystemHostsClick()
+		}
+	}
 }
 
 func (f *TFormMain) updateStatusBar(text string) {

@@ -10,6 +10,8 @@ import (
 
 const (
 	LineEnding = "\n"
+
+	CommandKeyCode uint32 = types.SsCtrl
 )
 
 func GetHomeDir() string {

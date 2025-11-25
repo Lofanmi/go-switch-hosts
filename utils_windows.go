@@ -6,11 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ying32/govcl/vcl/types"
 	_ "github.com/ying32/liblclbinres"
 )
 
 const (
 	LineEnding = "\r\n"
+
+	CommandKeyCode uint32 = types.SsCtrl
 )
 
 func GetHomeDir() string {

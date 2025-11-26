@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -170,15 +172,35 @@ func (cm *ConfigManager) saveIdsToFile() error {
 	return nil
 }
 
+func (cm *ConfigManager) saveMetaJsonToFile(idNumber int) error {
+	f := filepath.Join(cm.basePath, "data", "collection", "hosts", "meta.json")
+	data := []byte(fmt.Sprintf("{\"index\":%d}", idNumber))
+	if err := os.WriteFile(f, data, 0644); err != nil {
+		return fmt.Errorf("保存meta.json文件失败: %w", err)
+	}
+	return nil
+}
+
 func (cm *ConfigManager) AddConfig(config ConfigEntry, content string) error {
+	ids := make([]int, 0, len(cm.ids))
+	for _, id := range cm.ids {
+		if i, _ := strconv.Atoi(id); i > 0 {
+			ids = append(ids, i)
+		}
+	}
+	sort.Ints(ids)
+	var idNumber int
+	if len(ids) > 0 {
+		idNumber = ids[len(ids)-1] + 1
+	}
 	cm.config = append(cm.config, config)
 	hostsData := HostsData{
 		ID:       config.ID,
 		Content:  content,
-		IDNumber: config.ID,
+		IDNumber: strconv.Itoa(idNumber),
 	}
 	cm.hostsList = append(cm.hostsList, hostsData)
-	cm.ids = append(cm.ids, config.ID)
+	cm.ids = append(cm.ids, hostsData.IDNumber)
 	// 确保目录存在
 	if err := os.MkdirAll(filepath.Join(cm.basePath, "data", "list"), 0755); err != nil {
 		return fmt.Errorf("创建配置目录失败: %w", err)
@@ -194,8 +216,11 @@ func (cm *ConfigManager) AddConfig(config ConfigEntry, content string) error {
 	if err := cm.saveIdsToFile(); err != nil {
 		return err
 	}
+	if err := cm.saveMetaJsonToFile(idNumber); err != nil {
+		return err
+	}
 	// 保存hosts数据文件
-	hostsDataFile := filepath.Join(cm.basePath, "data", "collection", "hosts", "data", config.ID+".json")
+	hostsDataFile := filepath.Join(cm.basePath, "data", "collection", "hosts", "data", hostsData.IDNumber+".json")
 	hostsDataContent, err := json.MarshalIndent(hostsData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("序列化hosts数据失败: %w", err)
@@ -215,6 +240,7 @@ func (cm *ConfigManager) DeleteConfig(id string) error {
 		}
 	}
 	// 从hosts列表中删除
+	var idNumber string
 	for i, hostsData := range cm.hostsList {
 		if hostsData.ID == id {
 			// 删除数据文件
@@ -223,19 +249,13 @@ func (cm *ConfigManager) DeleteConfig(id string) error {
 				return fmt.Errorf("删除数据文件失败: %w", err)
 			}
 			cm.hostsList = append(cm.hostsList[:i], cm.hostsList[i+1:]...)
+			idNumber = hostsData.IDNumber
 			break
 		}
 	}
 	// 从ID列表中删除
-	for i, idNumber := range cm.ids {
-		// 找到对应的ID编号
-		dataFile := filepath.Join(cm.basePath, "data", "collection", "hosts", "data", idNumber+".json")
-		data, err := os.ReadFile(dataFile)
-		if err != nil {
-			continue
-		}
-		var hostsData HostsData
-		if json.Unmarshal(data, &hostsData) == nil && hostsData.ID == id {
+	for i, ids := range cm.ids {
+		if ids == idNumber {
 			cm.ids = append(cm.ids[:i], cm.ids[i+1:]...)
 			break
 		}

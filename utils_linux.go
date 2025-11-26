@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 
+	"github.com/ying32/govcl/vcl/types"
 	_ "github.com/ying32/liblclbinres"
 )
 

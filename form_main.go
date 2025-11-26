@@ -29,7 +29,7 @@ type TFormMain struct {
 
 func (f *TFormMain) OnFormCreate(sender vcl.IObject) {
 	f.initComponents()
-	f.loadConfigToUI()
+	f.refreshUI()
 }
 
 func (f *TFormMain) initComponents() {
@@ -103,44 +103,6 @@ func (f *TFormMain) initComponents() {
 	f.StatusBar.SetAlign(types.AlBottom)
 	f.StatusBar.SetSimplePanel(true)
 	f.updateStatusBar("就绪")
-}
-
-func (f *TFormMain) loadConfigToUI() {
-	var checkBoxTop int32 = 10
-	configs := configManager.GetConfig()
-	for i, config := range configs {
-		checkBox := vcl.NewCheckBox(f.ScrollBox)
-		checkBox.SetParent(f.ScrollBox)
-		checkBox.SetCaption(config.Title)
-		checkBox.SetChecked(config.On)
-		checkBox.SetTop(checkBoxTop + int32(i*34))
-		checkBox.SetLeft(10)
-		checkBox.SetWidth(220)
-		checkBox.SetHeight(32)
-		checkBox.SetOnClick(func(sender vcl.IObject) { f.onCheckBoxClick(checkBox, config.ID) })
-		f.checkBoxList = append(f.checkBoxList, checkBox)
-		editLabel := vcl.NewLabel(f.ScrollBox)
-		editLabel.SetParent(f.ScrollBox)
-		editLabel.SetCaption("编辑")
-		editLabel.SetTop(checkBoxTop + int32(i*34))
-		editLabel.SetLeft(212)
-		editLabel.SetWidth(40)
-		editLabel.SetHeight(32)
-		editLabel.Font().SetColor(0xE16941)
-		editLabel.SetCursor(types.CrHandPoint)
-		editLabel.SetOnClick(func(sender vcl.IObject) { f.onEditLabelClick(config) })
-		deleteLabel := vcl.NewLabel(f.ScrollBox)
-		deleteLabel.SetParent(f.ScrollBox)
-		deleteLabel.SetCaption("删除")
-		deleteLabel.SetTop(checkBoxTop + int32(i*34))
-		deleteLabel.SetLeft(245)
-		deleteLabel.SetWidth(40)
-		deleteLabel.SetHeight(32)
-		deleteLabel.Font().SetColor(colors.ClRed)
-		deleteLabel.SetCursor(types.CrHandPoint)
-		deleteLabel.SetOnClick(func(sender vcl.IObject) { f.onDeleteLabelClick(config) })
-	}
-	f.onButtonSystemHostsClick()
 }
 
 func (f *TFormMain) onButtonSystemHostsClick() {
@@ -331,7 +293,6 @@ func (f *TFormMain) refreshUI() {
 	if f.ScrollBox != nil {
 		parent := f.ScrollBox.Parent()
 		if parent != nil {
-			f.ScrollBox.Free()
 			f.ScrollBox = vcl.NewScrollBox(parent)
 			f.ScrollBox.SetParent(parent)
 			f.ScrollBox.SetAlign(types.AlClient)
@@ -339,7 +300,10 @@ func (f *TFormMain) refreshUI() {
 	}
 	// 重新加载配置并完全重建UI
 	configs := configManager.GetConfig()
-	var checkBoxTop int32 = 10
+	var (
+		checkBoxTop int32 = 6
+		labelTop    int32 = 8
+	)
 	f.checkBoxList = make([]*vcl.TCheckBox, 0, len(configs))
 	for i, config := range configs {
 		// 创建CheckBox
@@ -357,8 +321,8 @@ func (f *TFormMain) refreshUI() {
 		editLabel := vcl.NewLabel(f.ScrollBox)
 		editLabel.SetParent(f.ScrollBox)
 		editLabel.SetCaption("编辑")
-		editLabel.SetTop(checkBoxTop + int32(i*34))
-		editLabel.SetLeft(212)
+		editLabel.SetTop(labelTop + int32(i*34))
+		editLabel.SetLeft(206)
 		editLabel.SetWidth(40)
 		editLabel.SetHeight(32)
 		editLabel.Font().SetColor(0xE16941)
@@ -368,27 +332,30 @@ func (f *TFormMain) refreshUI() {
 		deleteLabel := vcl.NewLabel(f.ScrollBox)
 		deleteLabel.SetParent(f.ScrollBox)
 		deleteLabel.SetCaption("删除")
-		deleteLabel.SetTop(checkBoxTop + int32(i*34))
-		deleteLabel.SetLeft(245)
+		deleteLabel.SetTop(labelTop + int32(i*34))
+		deleteLabel.SetLeft(240)
 		deleteLabel.SetWidth(40)
 		deleteLabel.SetHeight(32)
 		deleteLabel.Font().SetColor(colors.ClRed)
 		deleteLabel.SetCursor(types.CrHandPoint)
 		deleteLabel.SetOnClick(func(sender vcl.IObject) { f.onDeleteLabelClick(config) })
 	}
+	// 如果没有正在编辑的配置，则显示系统hosts
+	if editingID == "" {
+		f.onButtonSystemHostsClick()
+		return
+	}
 	// 如果之前正在编辑的配置被删除了，则显示系统hosts
-	if editingID != "" {
-		found := false
-		for _, config := range configs {
-			if config.ID == editingID {
-				found = true
-				break
-			}
+	found := false
+	for _, config := range configs {
+		if config.ID == editingID {
+			found = true
+			break
 		}
-		if !found {
-			f.currentEditID = ""
-			f.onButtonSystemHostsClick()
-		}
+	}
+	if !found {
+		f.currentEditID = ""
+		f.onButtonSystemHostsClick()
 	}
 }
 

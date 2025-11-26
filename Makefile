@@ -36,11 +36,11 @@ linux:
 
 # macOS 平台编译
 darwin:
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o GoSwitchHosts-darwin-amd64 .
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -tags tempdll $(LDFLAGS) -o GoSwitchHosts-darwin-amd64 .
 
 # Windows 平台编译
 windows: res
-	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o GoSwitchHosts-windows-amd64.exe .
+	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -tags tempdll $(LDFLAGS) -o GoSwitchHosts-windows-amd64.exe .
 
 # 编译所有平台版本
 all: linux darwin windows

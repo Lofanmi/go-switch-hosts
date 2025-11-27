@@ -77,7 +77,7 @@ func (f *TFormMain) initComponents() {
 	f.ButtonSystemHosts.SetCaption("系统 Hosts")
 	f.ButtonSystemHosts.SetLeft(0)
 	f.ButtonSystemHosts.SetTop(6)
-	f.ButtonSystemHosts.SetWidth(80)
+	f.ButtonSystemHosts.SetWidth(85)
 	f.ButtonSystemHosts.SetHeight(28)
 	f.ButtonSystemHosts.SetOnClick(func(sender vcl.IObject) { f.onButtonSystemHostsClick() })
 	f.ButtonShowInfo = vcl.NewButton(rightTopPanel)
@@ -85,7 +85,7 @@ func (f *TFormMain) initComponents() {
 	f.ButtonShowInfo.SetCaption("查看信息")
 	f.ButtonShowInfo.SetLeft(96)
 	f.ButtonShowInfo.SetTop(6)
-	f.ButtonShowInfo.SetWidth(80)
+	f.ButtonShowInfo.SetWidth(85)
 	f.ButtonShowInfo.SetHeight(28)
 	f.ButtonShowInfo.SetOnClick(func(sender vcl.IObject) { f.onButtonShowInfoClick() })
 	f.MemoHosts = vcl.NewMemo(rightPanel)
@@ -340,6 +340,11 @@ func (f *TFormMain) refreshUI() {
 		deleteLabel.SetCursor(types.CrHandPoint)
 		deleteLabel.SetOnClick(func(sender vcl.IObject) { f.onDeleteLabelClick(config) })
 	}
+
+	if vcl.Screen.PixelsPerInch() != 96 {
+		formMain.Scale96ToScreen(vcl.Screen.PixelsPerInch())
+	}
+
 	// 如果没有正在编辑的配置，则显示系统hosts
 	if editingID == "" {
 		f.onButtonSystemHostsClick()

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -172,6 +171,18 @@ func (cm *ConfigManager) saveIdsToFile() error {
 	return nil
 }
 
+func (cm *ConfigManager) loadMetaIdNumber() (idNumber int, err error) {
+	var meta struct {
+		Index int `json:"index"`
+	}
+	if err = cm.loadJSONFile(&meta, cm.basePath, "data", "collection", "hosts", "meta.json"); err != nil {
+		err = fmt.Errorf("加载配置列表失败: %w", err)
+		return
+	}
+	idNumber = meta.Index
+	return
+}
+
 func (cm *ConfigManager) saveMetaJsonToFile(idNumber int) error {
 	f := filepath.Join(cm.basePath, "data", "collection", "hosts", "meta.json")
 	data := []byte(fmt.Sprintf("{\"index\":%d}", idNumber))
@@ -182,16 +193,12 @@ func (cm *ConfigManager) saveMetaJsonToFile(idNumber int) error {
 }
 
 func (cm *ConfigManager) AddConfig(config ConfigEntry, content string) error {
-	ids := make([]int, 0, len(cm.ids))
-	for _, id := range cm.ids {
-		if i, _ := strconv.Atoi(id); i > 0 {
-			ids = append(ids, i)
-		}
-	}
-	sort.Ints(ids)
+	// 取得配置文件的id
 	var idNumber int
-	if len(ids) > 0 {
-		idNumber = ids[len(ids)-1] + 1
+	if v, err := cm.loadMetaIdNumber(); err != nil {
+		return err
+	} else {
+		idNumber = v + 1 // 自增
 	}
 	cm.config = append(cm.config, config)
 	hostsData := HostsData{

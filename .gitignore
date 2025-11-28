@@ -18,6 +18,7 @@
 .idea/*
 .vscode/*
 *.log
+.DS_Store
 GoSwitchHosts-linux-amd64
 GoSwitchHosts-darwin-amd64
 GoSwitchHosts-windows-amd64.exe

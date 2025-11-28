@@ -34,7 +34,6 @@ func main() {
 		vcl.ShowMessage(fmt.Sprintf("加载 SwitchHosts 配置失败: %v", err))
 		return
 	}
-	vcl.Application.SetScaled(true)
 	vcl.Application.Initialize()
 	vcl.Application.SetMainFormOnTaskBar(true)
 	vcl.Application.SetShowMainForm(true)

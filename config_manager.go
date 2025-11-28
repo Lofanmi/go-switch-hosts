@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -140,19 +141,141 @@ func (cm *ConfigManager) UpdateConfigStatus(id string, on bool) error {
 	for i := range cm.config {
 		if cm.config[i].ID == id {
 			cm.config[i].On = on
-			// 保存到配置文件
-			filename := filepath.Join(cm.basePath, "data", "list", "tree.json")
-			data, err := json.MarshalIndent(cm.config, "", "  ")
-			if err != nil {
-				return fmt.Errorf("序列化配置失败: %w", err)
-			}
-			if e := os.WriteFile(filename, data, 0644); e != nil {
-				return fmt.Errorf("保存配置文件失败: %w", e)
-			}
-			return nil
+			return cm.saveConfigToFile()
 		}
 	}
 	return fmt.Errorf("未找到ID为 %s 的配置项", id)
+}
+
+func (cm *ConfigManager) saveConfigToFile() error {
+	configFile := filepath.Join(cm.basePath, "data", "list", "tree.json")
+	data, err := json.MarshalIndent(cm.config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("序列化配置失败: %w", err)
+	}
+	if err := os.WriteFile(configFile, data, 0644); err != nil {
+		return fmt.Errorf("保存配置文件失败: %w", err)
+	}
+	return nil
+}
+
+func (cm *ConfigManager) saveIdsToFile() error {
+	idsFile := filepath.Join(cm.basePath, "data", "collection", "hosts", "ids.json")
+	idsData, err := json.MarshalIndent(cm.ids, "", "  ")
+	if err != nil {
+		return fmt.Errorf("序列化ID列表失败: %w", err)
+	}
+	if err = os.WriteFile(idsFile, idsData, 0644); err != nil {
+		return fmt.Errorf("保存ID列表文件失败: %w", err)
+	}
+	return nil
+}
+
+func (cm *ConfigManager) loadMetaIdNumber() (idNumber int, err error) {
+	var meta struct {
+		Index int `json:"index"`
+	}
+	if err = cm.loadJSONFile(&meta, cm.basePath, "data", "collection", "hosts", "meta.json"); err != nil {
+		err = fmt.Errorf("加载配置列表失败: %w", err)
+		return
+	}
+	idNumber = meta.Index
+	return
+}
+
+func (cm *ConfigManager) saveMetaJsonToFile(idNumber int) error {
+	f := filepath.Join(cm.basePath, "data", "collection", "hosts", "meta.json")
+	data := []byte(fmt.Sprintf("{\"index\":%d}", idNumber))
+	if err := os.WriteFile(f, data, 0644); err != nil {
+		return fmt.Errorf("保存meta.json文件失败: %w", err)
+	}
+	return nil
+}
+
+func (cm *ConfigManager) AddConfig(config ConfigEntry, content string) error {
+	// 取得配置文件的id
+	var idNumber int
+	if v, err := cm.loadMetaIdNumber(); err != nil {
+		return err
+	} else {
+		idNumber = v + 1 // 自增
+	}
+	cm.config = append(cm.config, config)
+	hostsData := HostsData{
+		ID:       config.ID,
+		Content:  content,
+		IDNumber: strconv.Itoa(idNumber),
+	}
+	cm.hostsList = append(cm.hostsList, hostsData)
+	cm.ids = append(cm.ids, hostsData.IDNumber)
+	// 确保目录存在
+	if err := os.MkdirAll(filepath.Join(cm.basePath, "data", "list"), 0755); err != nil {
+		return fmt.Errorf("创建配置目录失败: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Join(cm.basePath, "data", "collection", "hosts", "data"), 0755); err != nil {
+		return fmt.Errorf("创建hosts数据目录失败: %w", err)
+	}
+	// 保存配置文件
+	if err := cm.saveConfigToFile(); err != nil {
+		return err
+	}
+	// 保存ID列表文件
+	if err := cm.saveIdsToFile(); err != nil {
+		return err
+	}
+	if err := cm.saveMetaJsonToFile(idNumber); err != nil {
+		return err
+	}
+	// 保存hosts数据文件
+	hostsDataFile := filepath.Join(cm.basePath, "data", "collection", "hosts", "data", hostsData.IDNumber+".json")
+	hostsDataContent, err := json.MarshalIndent(hostsData, "", "  ")
+	if err != nil {
+		return fmt.Errorf("序列化hosts数据失败: %w", err)
+	}
+	if err = os.WriteFile(hostsDataFile, hostsDataContent, 0644); err != nil {
+		return fmt.Errorf("保存hosts数据文件失败: %w", err)
+	}
+	return nil
+}
+
+func (cm *ConfigManager) DeleteConfig(id string) error {
+	// 从配置列表中删除
+	for i, config := range cm.config {
+		if config.ID == id {
+			cm.config = append(cm.config[:i], cm.config[i+1:]...)
+			break
+		}
+	}
+	// 从hosts列表中删除
+	var idNumber string
+	for i, hostsData := range cm.hostsList {
+		if hostsData.ID == id {
+			// 删除数据文件
+			dataFile := filepath.Join(cm.basePath, "data", "collection", "hosts", "data", hostsData.IDNumber+".json")
+			if err := os.Remove(dataFile); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("删除数据文件失败: %w", err)
+			}
+			cm.hostsList = append(cm.hostsList[:i], cm.hostsList[i+1:]...)
+			idNumber = hostsData.IDNumber
+			break
+		}
+	}
+	// 从ID列表中删除
+	for i, ids := range cm.ids {
+		if ids == idNumber {
+			cm.ids = append(cm.ids[:i], cm.ids[i+1:]...)
+			break
+		}
+	}
+	// 保存配置文件
+	if err := cm.saveConfigToFile(); err != nil {
+		return err
+	}
+	// 保存ID列表文件
+	if err := cm.saveIdsToFile(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (cm *ConfigManager) loadJSONFile(o any, element ...string) error {

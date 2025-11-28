@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/ying32/govcl/vcl"
-	_ "github.com/ying32/liblclbinres"
 )
 
 var (
@@ -40,6 +39,5 @@ func main() {
 	vcl.Application.SetShowMainForm(true)
 	vcl.Application.SetTitle("GoSwitchHosts v1.0")
 	vcl.Application.CreateForm(&formMain)
-	vcl.Application.SetScaled(true)
 	vcl.Application.Run()
 }

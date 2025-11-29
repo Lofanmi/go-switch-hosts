@@ -3,7 +3,6 @@
 *.exe~
 *.dll
 *.so
-*.dylib
 
 # Test binary, built with `go test -c`
 *.test
@@ -21,4 +20,5 @@
 .DS_Store
 GoSwitchHosts-linux-amd64
 GoSwitchHosts-darwin-amd64
+GoSwitchHosts.app
 GoSwitchHosts-windows-amd64.exe

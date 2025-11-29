@@ -53,7 +53,8 @@
 - Go 1.25+
 - **编译依赖**:
   - Windows: GCC (用于编译资源文件)
-  - Linux/macOS: GCC (可选，用于交叉编译)
+  - Linux/macOS: GCC, ImageMagick (用于图标转换，可选)
+  - macOS 开发推荐: `brew install imagemagick`
 
 ## 编译运行
 
@@ -67,6 +68,16 @@ make build
 make linux     # 编译 Linux AMD64 版本
 make darwin    # 编译 macOS AMD64 版本
 make windows   # 编译 Windows AMD64 版本（包含资源文件）
+
+# 编译 macOS APP 包（用于 macOS 平台）
+make macapp    # 编译 macOS 并生成 .app 应用包
+
+# macOS APP 包说明
+生成的 `GoSwitchHosts.app` 包含：
+- 完整的 macOS 应用结构（Contents/MacOS, Contents/Resources）
+- 高清应用图标（从原始 ICO 文件提取）
+- 内置 liblcl.dylib 运行时库
+- 无需额外依赖，可直接在 macOS 上运行
 
 # 编译所有支持的平台
 make all
@@ -97,6 +108,10 @@ go-switch-hosts/
 ├── utils_unix.go       # Unix 平台相关函数
 ├── GoSwitchHosts.rc    # 资源文件
 ├── Makefile           # 编译脚本
+├── macos/            # macOS APP 资源目录
+│   ├── Info.plist    # macOS 应用配置
+│   ├── GoSwitchHosts.icns  # 应用图标
+│   └── liblcl.dylib  # govcl 运行时库
 └── go.mod             # Go 模块文件
 ```
 

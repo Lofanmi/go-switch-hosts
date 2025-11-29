@@ -87,7 +87,7 @@ windows:
 		CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -buildmode=exe -tags tempdll $(LDFLAGS) -o GoSwitchHosts-windows-amd64.exe .; \
 	else \
 		echo "警告: windres未找到，跳过资源文件编译"; \
-		CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -buildmode=exe $(LDFLAGS) -o GoSwitchHosts-windows-amd64.exe .; \
+		CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -buildmode=exe -tags tempdll $(LDFLAGS) -o GoSwitchHosts-windows-amd64.exe .; \
 	fi
 
 # 编译所有平台版本

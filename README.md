@@ -55,6 +55,12 @@
   - Windows: GCC (用于编译资源文件)
   - Linux/macOS: GCC, ImageMagick (用于图标转换，可选)
   - macOS 开发推荐: `brew install imagemagick`
+  - macOS 交叉编译 Windows: `brew install mingw-w64` (获取windres工具)
+
+  **⚠️ Windows 注意事项**:
+  - Go >=1.15 编译 Windows 可执行文件时，必须使用 `-buildmode=exe` 编译选项
+  - 否则会因 ASLR (地址空间布局随机化) 导致随机错误弹窗
+  - liblcl 库当前不支持 ASLR，这是 Free Pascal 的限制
 
 ## 编译运行
 
@@ -67,7 +73,8 @@ make build
 # 编译特定平台版本
 make linux     # 编译 Linux AMD64 版本
 make darwin    # 编译 macOS AMD64 版本
-make windows   # 编译 Windows AMD64 版本（包含资源文件）
+make windows   # 编译 Windows AMD64 版本（自动使用-buildmode=exe）
+               # 如果有windres则包含资源文件，否则跳过
 
 # 编译 macOS APP 包（用于 macOS 平台）
 make macapp    # 编译 macOS 并生成 .app 应用包

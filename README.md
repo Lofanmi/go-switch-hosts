@@ -1,14 +1,43 @@
 # GoSwitchHosts
 
+<img src="GoSwitchHosts.ico" alt="GoSwitchHosts" style="width:64px; height:auto;" />
+
 一个基于 Go 语言开发的跨平台 hosts 文件管理工具，提供图形化界面来快速切换不同的 hosts 配置。这是一个轻量级、高性能的原生桌面应用，专为追求极致性能和简洁体验的用户设计。
 
-![GoSwitchHosts](GoSwitchHosts.ico)
 
 ## 🌟 项目初衷
 
 本项目可以简要替代 [oldj/SwitchHosts](https://github.com/oldj/SwitchHosts) 项目，解决原版本使用 Electron 框架导致的资源占用过高问题。
 
 但它并不是完全替代，它仅仅支持本地 hosts 的读取、新增和切换，并不会支持远程、文件夹、代理、备份等其它功能，也不会支持语法高亮。
+
+
+## 🖥️ Windows 运行效果
+
+<img src="./img/Windows运行截图.png" alt="Windows 运行截图" style="max-width:600px; width:100%; height:auto;" />
+
+SwitchHosts 约占用 308M 运行内存（专用工作集），加上运行库要 600M 以上。
+
+<img src="./img/Windows内存占用1.png" alt="Windows 内存占用1" style="max-width:600px; width:100%; height:auto;" />
+
+GoSwitchHosts 仅需 30M 内存，非常轻量。
+
+<img src="./img/Windows内存占用2.png" alt="Windows 内存占用2" style="max-width:600px; width:100%; height:auto;" />
+
+## 🖥️ macOS 运行效果
+
+> 注：由 Intel 二进制转译，没有原生编译 arm64 二进制，govcl 官方没有直接提供运行库。自己编译太麻烦（懒）反正也很快~
+
+<img src="./img/macOS运行截图.png" alt="macOS 运行截图" style="max-width:600px; width:100%; height:auto;" />
+
+SwitchHosts 约占用 307M 运行内存。
+
+<img src="./img/macOS内存占用1.png" alt="macOS 内存占用1" style="max-width:600px; width:100%; height:auto;" />
+
+GoSwitchHosts 仅需 57M 内存，非常轻量（操作 UI 后会上升到 120M-150M，不知道为啥）。
+
+<img src="./img/macOS内存占用2.png" alt="macOS 内存占用2" style="max-width:600px; width:100%; height:auto;" />
+
 
 ### 🚀 性能对比
 
@@ -53,7 +82,14 @@
 - Go 1.25+
 - **编译依赖**:
   - Windows: GCC (用于编译资源文件)
-  - Linux/macOS: GCC (可选，用于交叉编译)
+  - Linux/macOS: GCC, ImageMagick (用于图标转换，可选)
+  - macOS 开发推荐: `brew install imagemagick`
+  - macOS 交叉编译 Windows: `brew install mingw-w64` (获取windres工具)
+
+  **⚠️ Windows 注意事项**:
+  - Go >=1.15 编译 Windows 可执行文件时，必须使用 `-buildmode=exe` 编译选项
+  - 否则会因 ASLR (地址空间布局随机化) 导致随机错误弹窗
+  - liblcl 库当前不支持 ASLR，这是 Free Pascal 的限制
 
 ## 编译运行
 
@@ -66,7 +102,18 @@ make build
 # 编译特定平台版本
 make linux     # 编译 Linux AMD64 版本
 make darwin    # 编译 macOS AMD64 版本
-make windows   # 编译 Windows AMD64 版本（包含资源文件）
+make windows   # 编译 Windows AMD64 版本（自动使用-buildmode=exe）
+               # 如果有windres则包含资源文件，否则跳过
+
+# 编译 macOS APP 包（用于 macOS 平台）
+make macapp    # 编译 macOS 并生成 .app 应用包
+
+# macOS APP 包说明
+生成的 `GoSwitchHosts.app` 包含：
+- 完整的 macOS 应用结构（Contents/MacOS, Contents/Resources）
+- 高清应用图标（从原始 ICO 文件提取）
+- 内置 liblcl.dylib 运行时库
+- 无需额外依赖，可直接在 macOS 上运行
 
 # 编译所有支持的平台
 make all
@@ -97,6 +144,10 @@ go-switch-hosts/
 ├── utils_unix.go       # Unix 平台相关函数
 ├── GoSwitchHosts.rc    # 资源文件
 ├── Makefile           # 编译脚本
+├── macos/            # macOS APP 资源目录
+│   ├── Info.plist    # macOS 应用配置
+│   ├── GoSwitchHosts.icns  # 应用图标
+│   └── liblcl.dylib  # govcl 运行时库
 └── go.mod             # Go 模块文件
 ```
 

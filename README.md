@@ -4,6 +4,14 @@
 
 一个基于 Go 语言开发的跨平台 hosts 文件管理工具，提供图形化界面来快速切换不同的 hosts 配置。这是一个轻量级、高性能的原生桌面应用，专为追求极致性能和简洁体验的用户设计。
 
+
+## 🌟 项目初衷
+
+本项目可以简要替代 [oldj/SwitchHosts](https://github.com/oldj/SwitchHosts) 项目，解决原版本使用 Electron 框架导致的资源占用过高问题。
+
+但它并不是完全替代，它仅仅支持本地 hosts 的读取、新增和切换，并不会支持远程、文件夹、代理、备份等其它功能，也不会支持语法高亮。
+
+
 ## 🖥️ Windows 运行效果
 
 <img src="./img/Windows运行截图.png" alt="Windows 运行截图" style="max-width:600px; width:100%; height:auto;" />
@@ -20,12 +28,16 @@ GoSwitchHosts 仅需 30M 内存，非常轻量。
 
 > 注：由 Intel 二进制转译，没有原生编译 arm64 二进制，govcl 官方没有直接提供运行库。自己编译太麻烦（懒）反正也很快~
 
+<img src="./img/macOS运行截图.png" alt="macOS 运行截图" style="max-width:600px; width:100%; height:auto;" />
 
-## 🌟 项目初衷
+SwitchHosts 约占用 307M 运行内存。
 
-本项目可以简要替代 [oldj/SwitchHosts](https://github.com/oldj/SwitchHosts) 项目，解决原版本使用 Electron 框架导致的资源占用过高问题。
+<img src="./img/macOS内存占用1.png" alt="macOS 内存占用1" style="max-width:600px; width:100%; height:auto;" />
 
-但它并不是完全替代，它仅仅支持本地 hosts 的读取、新增和切换，并不会支持远程、文件夹、代理、备份等其它功能，也不会支持语法高亮。
+GoSwitchHosts 仅需 57M 内存，非常轻量（操作 UI 后会上升到 120M-150M，不知道为啥）。
+
+<img src="./img/macOS内存占用2.png" alt="macOS 内存占用2" style="max-width:600px; width:100%; height:auto;" />
+
 
 ### 🚀 性能对比
 

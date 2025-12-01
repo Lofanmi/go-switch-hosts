@@ -1,8 +1,25 @@
 # GoSwitchHosts
 
+<img src="GoSwitchHosts.ico" alt="GoSwitchHosts" style="width:64px; height:auto;" />
+
 一个基于 Go 语言开发的跨平台 hosts 文件管理工具，提供图形化界面来快速切换不同的 hosts 配置。这是一个轻量级、高性能的原生桌面应用，专为追求极致性能和简洁体验的用户设计。
 
-![GoSwitchHosts](GoSwitchHosts.ico)
+## 🖥️ Windows 运行效果
+
+<img src="./img/Windows运行截图.png" alt="Windows 运行截图" style="max-width:600px; width:100%; height:auto;" />
+
+SwitchHosts 约占用 308M 运行内存（专用工作集），加上运行库要 600M 以上。
+
+<img src="./img/Windows内存占用1.png" alt="Windows 内存占用1" style="max-width:600px; width:100%; height:auto;" />
+
+GoSwitchHosts 仅需 30M 内存，非常轻量。
+
+<img src="./img/Windows内存占用2.png" alt="Windows 内存占用2" style="max-width:600px; width:100%; height:auto;" />
+
+## 🖥️ macOS 运行效果
+
+> 注：由 Intel 二进制转译，没有原生编译 arm64 二进制，govcl 官方没有直接提供运行库。自己编译太麻烦（懒）反正也很快~
+
 
 ## 🌟 项目初衷
 
